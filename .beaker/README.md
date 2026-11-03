@@ -38,8 +38,9 @@ This mirrors the benchmark's `run_eval.run_task` (`--executor browser-use` path)
 
 ## Models
 
-- Agent: `gpt-6-luna` (`xhigh` reasoning, upstream's executor settings) when the run selects no
-  model. A selected model goes through `inference_target`, which also covers page extraction.
+- Agent: `gpt-6-luna` with upstream's executor settings, except `medium` reasoning instead of
+  `xhigh`, which took about 16 s per step. This applies when the run selects no model. A
+  selected model goes through `inference_target`, which also covers page extraction.
 - Judge: `openai:gpt-6-luna` through `scoring_inference_target()` with upstream's judge settings.
   `scorer_model` in `beaker.yaml` keeps it the same for the baseline and every candidate.
 - Upstream's published scores use `gpt-5.6-luna` as the judge, so scores here are **not

@@ -128,12 +128,13 @@ def _agent_llm(runtime: RolloutRuntime) -> TracedChatOpenAI:
 		model, base_url, api_key = target.model, target.base_url, target.api_key
 	else:
 		model, base_url, api_key = AGENT_MODEL, None, os.getenv('OPENAI_API_KEY')
-	# Upstream's create_agent_model settings; reasoning_models makes the fork send reasoning_effort.
+	# Upstream's create_agent_model settings but medium effort (xhigh took ~16 s per step); reasoning_models
+	# makes the fork send reasoning_effort.
 	return TracedChatOpenAI(
 		model=model,
 		base_url=base_url,
 		api_key=api_key,
-		reasoning_effort='xhigh',
+		reasoning_effort='medium',
 		reasoning_models=[model],
 		max_completion_tokens=32768,
 		temperature=None,
