@@ -192,8 +192,8 @@ async def _chromium_stderr(browser) -> str:
 	except TimeoutError:
 		process.kill()
 		return 'probe stayed up for 15s'
-	lines = [line for line in stderr.decode(errors='replace').splitlines() if 'dbus' not in line]
-	return f'probe exit {process.returncode}, uid {os.geteuid()}: ' + ' / '.join(lines[-8:])[-1500:]
+	lines = [line for line in stderr.decode(errors='replace').splitlines() if line.strip() and 'dbus' not in line]
+	return f'exit {process.returncode}, uid {os.geteuid()}: ' + ' / '.join(lines[-4:])[-600:]
 
 
 async def run_case(*, case_input: JsonValue, runtime: RolloutRuntime) -> CaseResult:
@@ -213,7 +213,8 @@ async def run_case(*, case_input: JsonValue, runtime: RolloutRuntime) -> CaseRes
 		try:
 			await browser.start()
 		except Exception as exc:
-			raise RetryableCaseError(f'Browser failed to start: {exc} | {await _chromium_stderr(browser)}') from exc
+			# Probe output first: Beaker truncates long case errors.
+			raise RetryableCaseError(f'Chromium did not start: {await _chromium_stderr(browser)} ({exc})') from exc
 		agent = Agent(task=case_input['instruction'], llm=llm, page_extraction_llm=llm, browser=browser, use_judge=False)
 
 		async def on_step_end(agent_after_step) -> None:
