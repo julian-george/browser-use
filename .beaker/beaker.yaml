@@ -1,0 +1,28 @@
+# Beaker configuration. Safe to commit; keep secret values out of this file.
+# integrations.<id>.required_env lists names used by setup and evaluation.
+# Keep local values in .beaker/.env and hosted values in encrypted agent settings.
+# source_dir is Git-root-relative; package_import_root is relative to source_dir.
+# Prefer the same immutable --dataset NAME@REVISION for smoke and launch.
+# Optional config_defaults applies to every integration in this file.
+# Add it only for shared run defaults; explicit CLI options override them.
+config_defaults:
+  # The findings judge must stay fixed across baseline and candidates.
+  scorer_model: openai:gpt-6-luna
+  # Each case runs a local Chromium; raise only after checking hosted memory.
+  max_concurrency: 4
+integrations:
+  browser_use:
+    agent_key: browser-use-bu-bench-v2-1
+    entrypoint: beaker_integration:integration
+    package_import_root: .beaker
+    source_dir: .
+    required_env: []
+    environment_base: debian_slim:3.12
+    # The pinned benchmark's task decryption needs this; browser-use only gets it transitively.
+    pip_install:
+      - cryptography==45.0.7
+    apt_install:
+      - chromium
+      - fonts-liberation
+      - fonts-noto-color-emoji
+default_integration: browser_use
