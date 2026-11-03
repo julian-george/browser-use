@@ -31,7 +31,8 @@ This mirrors the benchmark's `run_eval.run_task` (`--executor browser-use` path)
 3. Timeout is `task_timeout_s`, default 1800 (upstream uses 3600). Set it with launch `extra`.
    After a timeout or exception, the partial history is still judged.
 4. The judge evidence (steps, up to 50 screenshots, output files) travels in
-   `CaseResult.context`, sized to fit Beaker's 8 MiB result limit.
+   `CaseResult.context`. It is capped at 4 MiB (upstream allows 8 MB of screenshots) because
+   hosted judge calls go straight to Beaker's gateway, which rejects larger request bodies.
 5. If no step was produced (browser launch, provider or CDP failure), the case raises
    `RetryableCaseError`. A blocked site or a CAPTCHA is a real outcome, and the rubric scores it.
 
