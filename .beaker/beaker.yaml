@@ -6,13 +6,13 @@
 # Optional config_defaults applies to every integration in this file.
 # Add it only for shared run defaults; explicit CLI options override them.
 config_defaults:
-  # The findings judge must stay fixed across baseline and candidates.
-  scorer_model: openai:gpt-6-luna
   # Each case runs a local Chromium; raise only after checking hosted memory.
   max_concurrency: 4
 integrations:
   browser_use:
     agent_key: browser-use-bu-bench-v2-1
+    # The findings judge must stay fixed across baseline and candidates.
+    scorer_model: openai:gpt-6-luna
     entrypoint: beaker_integration:integration
     package_import_root: .beaker
     source_dir: .

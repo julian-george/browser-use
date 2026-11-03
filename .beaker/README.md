@@ -40,14 +40,16 @@ This mirrors the benchmark's `run_eval.run_task` (`--executor browser-use` path)
 - Agent: `gpt-6-luna` (`xhigh` reasoning, upstream's executor settings) when the run selects no
   model. A selected model goes through `inference_target`, which also covers page extraction.
 - Judge: `openai:gpt-6-luna` through `scoring_inference_target()` with upstream's judge settings.
-  Keep `scorer_model` the same for the baseline and every candidate.
+  `scorer_model` in `beaker.yaml` keeps it the same for the baseline and every candidate.
 - Upstream's published scores use `gpt-5.6-luna` as the judge, so scores here are **not
   directly comparable** to theirs.
 
 ## Launch
 
 ```bash
-beaker run trigger --dataset <name@revision> --config '{"scorer_model":"openai:gpt-6-luna"}'
+beaker run trigger --dataset <name@revision>
 ```
+
+The judge is pinned by `scorer_model: openai:gpt-6-luna` on the integration in `beaker.yaml`.
 
 The live web makes scores noisy. Compare candidates against a repeated baseline, not a single run.
