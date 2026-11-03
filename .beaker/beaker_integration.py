@@ -10,6 +10,7 @@ import base64
 import json
 import os
 import shutil
+import sys
 import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -173,6 +174,28 @@ def _record_step_actions(trace, agent) -> None:
 			call.output({'extracted_content': result.extracted_content, 'error': result.error, 'is_done': result.is_done})
 
 
+async def _chromium_stderr(browser) -> str:
+	"""Relaunch Chromium with the session's flags to surface why it exits; browser-use discards its stderr."""
+	executable = browser.browser_profile.executable_path
+	if executable is None:
+		return 'no explicit executable to probe'
+	process = await asyncio.create_subprocess_exec(
+		str(executable),
+		*browser.browser_profile.get_args(),
+		'--remote-debugging-port=0',
+		'about:blank',
+		stdout=asyncio.subprocess.DEVNULL,
+		stderr=asyncio.subprocess.PIPE,
+	)
+	try:
+		_, stderr = await asyncio.wait_for(process.communicate(), timeout=15)
+	except TimeoutError:
+		process.kill()
+		return 'probe stayed up for 15s'
+	lines = [line for line in stderr.decode(errors='replace').splitlines() if 'dbus' not in line]
+	return f'probe exit {process.returncode}, uid {os.geteuid()}: ' + ' / '.join(lines[-8:])[-1500:]
+
+
 async def run_case(*, case_input: JsonValue, runtime: RolloutRuntime) -> CaseResult:
 	from browser_use import Agent, Browser
 
@@ -183,10 +206,14 @@ async def run_case(*, case_input: JsonValue, runtime: RolloutRuntime) -> CaseRes
 		headless=True,
 		executable_path=shutil.which('chromium'),  # Hosted image's apt Chromium; None locally uses browser-use's default.
 		user_data_dir=profile_dir,
-		chromium_sandbox=os.geteuid() != 0,  # Chromium refuses its sandbox as root in the container.
+		chromium_sandbox=sys.platform != 'linux',  # The hosted Linux sandbox cannot host Chromium's own sandbox.
 	)
 	execution_error = None
 	try:
+		try:
+			await browser.start()
+		except Exception as exc:
+			raise RetryableCaseError(f'Browser failed to start: {exc} | {await _chromium_stderr(browser)}') from exc
 		agent = Agent(task=case_input['instruction'], llm=llm, page_extraction_llm=llm, browser=browser, use_judge=False)
 
 		async def on_step_end(agent_after_step) -> None:
