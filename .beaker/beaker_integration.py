@@ -43,6 +43,7 @@ MAX_STEPS = 100
 # Beaker carries at most 8 MiB per case result; screenshots get what the text evidence leaves.
 RESULT_LIMIT_BYTES = 8 * 1024 * 1024
 RESULT_HEADROOM_BYTES = 256 * 1024
+SHORT_CHROMIUM_TMPDIR = '/tmp/bu-chromium'
 
 EDITABLE_PATHS = (
 	'browser_use/agent/system_prompts/system_prompt.md',
@@ -202,6 +203,10 @@ async def run_case(*, case_input: JsonValue, runtime: RolloutRuntime) -> CaseRes
 	assert isinstance(case_input, dict)
 	llm = _agent_llm(runtime)
 	profile_dir = tempfile.mkdtemp(prefix='bu-bench-profile-')
+	if sys.platform == 'linux':
+		# Beaker's deep candidate TMPDIR overflows Chromium's SingletonSocket path limit (~108 chars).
+		os.makedirs(SHORT_CHROMIUM_TMPDIR, exist_ok=True)
+		os.environ['TMPDIR'] = SHORT_CHROMIUM_TMPDIR
 	browser = Browser(
 		headless=True,
 		executable_path=shutil.which('chromium'),  # Hosted image's apt Chromium; None locally uses browser-use's default.
