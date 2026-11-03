@@ -12,6 +12,7 @@ import os
 import shutil
 import tempfile
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import bu_bench
@@ -22,6 +23,7 @@ from beaker import (
 	Check,
 	Integration,
 	JsonValue,
+	RepositoryRunSetupResult,
 	RetryableCaseError,
 	RolloutRuntime,
 	RunSetup,
@@ -80,11 +82,15 @@ Row.model_rebuild()
 
 class Setup(RunSetup[Row]):
 	row_model = Row
-	_tasks_by_id: dict[str, dict] | None = None
+	_tasks_by_id: dict[str, dict]
+
+	@asynccontextmanager
+	async def prepare_run(self, *, runtime: SetupRuntime) -> AsyncIterator[dict[str, RepositoryRunSetupResult]]:
+		# Decrypt once per attempt; rows load concurrently.
+		self._tasks_by_id = await asyncio.to_thread(bu_bench.load_tasks_by_id)
+		yield {'repository': RepositoryRunSetupResult()}
 
 	async def load_cases(self, row: Row, *, runtime: SetupRuntime) -> AsyncIterator[Case]:
-		if self._tasks_by_id is None:
-			self._tasks_by_id = await asyncio.to_thread(bu_bench.load_tasks_by_id)
 		task = self._tasks_by_id[row.input.task_id]
 		identity = {
 			'revision': (task.get('revision'), row.input.revision),

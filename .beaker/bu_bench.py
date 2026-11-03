@@ -42,9 +42,10 @@ def _ensure_pinned_files() -> None:
 		response.raise_for_status()
 		if hashlib.sha256(response.content).hexdigest() != expected_sha:
 			raise RuntimeError(f'{name} from {url} does not match its pinned sha256')
-		# Atomic replace: concurrent cases may fetch the same file at once.
-		staging = path.with_suffix(f'.{os.getpid()}.part')
-		staging.write_bytes(response.content)
+		# Unique staging file + atomic replace: concurrent fetchers may race on the same file.
+		descriptor, staging = tempfile.mkstemp(dir=CACHE_DIR, prefix=f'{name}.', suffix='.part')
+		with os.fdopen(descriptor, 'wb') as staging_file:
+			staging_file.write(response.content)
 		os.replace(staging, path)
 
 
