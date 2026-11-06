@@ -40,10 +40,9 @@ AGENT_MODEL = 'gpt-6-luna'
 JUDGE_MODEL = 'gpt-6-luna'  # Must match the launch scorer_model (openai:gpt-6-luna).
 DEFAULT_TASK_TIMEOUT_S = 1800
 MAX_STEPS = 100
-# Hosted judge calls go straight to Beaker's gateway, which 413s large bodies (upstream allows 8 MB).
-# Screenshots get what the text evidence leaves of this; it also keeps the case result under 8 MiB.
-JUDGE_REQUEST_LIMIT_BYTES = 4 * 1024 * 1024
-JUDGE_PROMPT_HEADROOM_BYTES = 256 * 1024
+# Beaker carries at most 8 MiB per case result; screenshots get what the text evidence leaves.
+RESULT_LIMIT_BYTES = 8 * 1024 * 1024
+RESULT_HEADROOM_BYTES = 256 * 1024
 SHORT_CHROMIUM_TMPDIR = '/tmp/bu-chromium'
 
 EDITABLE_PATHS = (
@@ -261,7 +260,7 @@ async def run_case(*, case_input: JsonValue, runtime: RolloutRuntime) -> CaseRes
 		'execution_error': execution_error,
 	}
 	text_bytes = len(json.dumps([output, agent_steps, output_files_text, evidence_notes]))
-	screenshot_budget = max(500_000, JUDGE_REQUEST_LIMIT_BYTES - JUDGE_PROMPT_HEADROOM_BYTES - text_bytes)
+	screenshot_budget = max(1_000_000, min(8_000_000, RESULT_LIMIT_BYTES - RESULT_HEADROOM_BYTES - text_bytes))
 	screenshots, screenshot_metadata = bu_bench.screenshot_evidence().prepare_screenshots(raw_screenshots, 50, screenshot_budget)
 	evidence_notes.extend(screenshot_metadata['notes'])
 	return CaseResult(
